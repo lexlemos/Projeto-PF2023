@@ -1,0 +1,15 @@
+/*
+Inspirado no código de Mario Souto
+https://github.com/omariosouto/flappy-bird-devsoutinho/blob/master
+*/
+body {
+    min-height: 100vh;
+    justify-content: center;
+    align-items: center;
+    background-color: greenyellow;
+}
+canvas {
+    border: 10px solid hwb(0 100% 0%);
+    display: block;
+    margin: 0 auto;
+}
