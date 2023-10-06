@@ -8,6 +8,8 @@ const specEvent = o => e => x => Object.keys(o).map(k => objOf(k)(o[k](e)(x))).r
 //objeto mutavel
 const sprite = new Image()
 sprite.src = "./sprites.png"
+const sprite2 = new Image()
+sprite2.src = "./sprites2.png"
 //
 
 // Desenha um objeto do jogo, utilizando de um contxto do canvas uma imagem de spritesheet e o próprio objeto
@@ -53,25 +55,28 @@ const pipe_pair = (x, y, gap) => {
 }
 
 // gera um novo objeto de jogador(player) atualizando sua posição com base na cena do jogo, no tempo passado, e na tecla pressionada
-const next_player = (execution) => (state) => {
-    if(state.scene === "play") {
-      const new_y =   cap(state.canvas.height - state.floor.height, 0)(state.player.y +state.player.v*execution.dt, 24)
-      const new_v = (execution.keyboard.key === "w") ? -0.5 : state.player.v + execution.dt*0.002
-      return merge(state.player)({y: new_y, v: new_v})
-    }
-    return {...state.player}
+const next_player = (name) => (execution) => (state) => {
+  if(state.scene === "play") {
+    const new_y =   cap(state.canvas.height - state.floor.height, 0)(state[name].y +state[name].v*execution.dt, 24)
+    const new_v = (execution.keyboard[state[name].key]) ? -0.5 : state[name].v + execution.dt*0.002
+    return merge(state[name])({y: new_y, v: new_v})
+  }
+  return {...state[name]}
 }
 
 //Muda a cena do jogo, sai da tela de início se apertar "w"
 const next_scene = (execution) => (state) => {
-    if(state.scene === "start") {
-        if(execution.keyboard.key === "w") {
-            return "play"
-        }
-        return "start"
+  if (state.scene === "start") {
+    if (execution.keyboard.w || execution.keyboard.p) {
+      return "play"
     }
-    return "play"
+    return "start"
+  }
+  return "play"
 }
+
+//função que retorna uma propriedade do jogo igual à que foi passada como parâmetro, utilizada na função next_state para os elementos do game que não serão alterados com o tempo
+const keep = (name) => (execution) => (state) => state[name]
 
 //Move um objeto do cenário do jogo(utilizado para mover o plano de fundo e o chão)
 const move_scenario_object = (name) => (execution) => (state) => {
@@ -103,15 +108,17 @@ const update_pipes = (execution) => (state) => {
 }
 //gera um novo estado do jogo
 const next_state = specEvent({
-    canvas: (execution) => (state) => state.canvas,
-    context: (execution) => (state) => state.context,
-    spritesheet: (execution) => (state) => state.spritesheet,
-    initial_screen: (execution) => (state) => state.initial_screen,
-    speed: (execution) => (state) => state.speed,
+    canvas: keep("canvas"),
+    context: keep("context"),
+    spritesheet: keep("spritesheet"),
+    spritesheet2: keep("spritesheet2"),
+    initial_screen: keep("initial_screen"),
+    speed: keep("speed"),
     pipes: update_pipes,
     floor: move_scenario_object('floor'),
     background: move_scenario_object('background'),
-    player: next_player,
+    player: next_player("player"),
+    player2: next_player("player2"),
     scene: next_scene
 })
 
@@ -127,6 +134,7 @@ const draw_game = (state) => {
     })
     if(state.scene === "play"){
         draw_game_object(state.context)(state.spritesheet)(state.player)
+        draw_game_object(state.context)(state.spritesheet2)(state.player2)
     }
     else {
         draw_game_object(state.context)(state.spritesheet)(state.initial_screen)
@@ -138,6 +146,7 @@ let game = {
     canvas : Object.freeze(document.getElementById('canvas')),
     context : Object.freeze(canvas.getContext('2d')),
     spritesheet: Object.freeze(sprite),
+    spritesheet2: Object.freeze(sprite2),
     speed: 0.25,
     scene: "start",
     floor: {
@@ -150,16 +159,29 @@ let game = {
         x: 0,
         y: canvas.height - 112,
     },
-    player : {
-        spriteX: 0,
-        spriteY: 0,
-        swidth: 33,
-        sheight: 24,
-        width: 33,
-        height: 24,
-        x: canvas.width/2 - 16.5,
-        y: 50,
-        v: 0
+    player2: {
+      spriteX: 0,
+      spriteY: 0,
+      swidth: 33,
+      sheight: 24,
+      width: 33,
+      height: 24,
+      x: canvas.width / 2 - 16,
+      y: 50,
+      v: 0,
+      key: "p"
+          },
+    player: {
+      spriteX: 0,
+      spriteY: 0,
+      swidth: 33,
+      sheight: 24,
+      width: 33,
+      height: 24,
+      x: canvas.width / 2 - 16.5,
+      y: 50,
+      v: 0,
+      key: "w"
     },
     background : {
         spriteX: 390,
@@ -186,7 +208,7 @@ let game = {
 
 // trecho não funcional
 //variável que armazena quando a tecla "w" é apertada e a variação de tempo entre um frame e outro
-let global_event = {dt: 0, keyboard: {key: ""}, seed: Math.random()}
+let global_event = {dt: 0, keyboard: {w: false, p: false }, seed: Math.random()}
 
 //atualiza os frames e o estado do jogo
 const loop = (t1) => (t2) => {
@@ -199,21 +221,20 @@ const loop = (t1) => (t2) => {
 
 //atualiza a variável global quando a tecla "w" é apertada e solta
 window.addEventListener("keypress", (e) => {
-    if (e.key === "w" && global_event.keyboard.key !== "w") {
-        global_event.keyboard = e
-    }
+  if (e.key === "w" && global_event.keyboard.w === false) {
+    global_event.keyboard.w = true
+  }
+  if (e.key === "p" && global_event.keyboard.p === false) {
+    global_event.keyboard.p = true
+  }
 })
 window.addEventListener("keyup", (e) => {
-    if (e.key === "w") {
-        global_event.keyboard = {key: ""}
-    }
+  if (e.key === "w") {
+    global_event.keyboard.w = false
+  }
+  if (e.key === "p") {
+    global_event.keyboard.p = false
+  }
 })
-//impede a tecla alt de tirar o foco do jogo
-window.addEventListener('keydown', (e) => {
-    if (e.altKey) {
-      e.preventDefault();
-    }
-  });
-
 //roda o jogo
 loop(0)(0)
