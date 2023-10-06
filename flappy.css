@@ -1,15 +1,15 @@
 /*
-Inspirado no código de Mario Souto
-https://github.com/omariosouto/flappy-bird-devsoutinho/blob/master
+Código desenvolvido por Mario Souto
+https://github.com/omariosouto/flappy-bird-devsoutinho/blob/master/index.html
 */
 body {
     min-height: 100vh;
+    display: flex;
     justify-content: center;
     align-items: center;
-    background-color: greenyellow;
 }
 canvas {
-    border: 10px solid hwb(0 100% 0%);
+    border: 1px solid #000;
     display: block;
     margin: 0 auto;
 }
