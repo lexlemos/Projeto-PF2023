@@ -5,21 +5,15 @@ const objOf     = k => v => ({ [k]: v })
 const spec      = o => x => Object.keys(o).map(k => objOf(k)(o[k](x))).reduce((acc, o) => Object.assign(acc, o))
 const specEvent = o => e => x => Object.keys(o).map(k => objOf(k)(o[k](e)(x))).reduce((acc, o) => Object.assign(acc, o))
 
-//objeto mutavel
+//objetos mutáveis, fonte das imagens do game
 const sprite = new Image()
 sprite.src = "./sprites.png"
 const sprite2 = new Image()
 sprite2.src = "./sprites2.png"
+const sprite3 = new Image()
+sprite3.src = "./sprite3.png"
 //
-// Verifica se ocorreu uma colisão entre o jogador e um objeto
-function check_collision(player, object) {
-  return (
-    player.x + player.width > object.x &&
-    player.x < object.x + object.width &&
-    player.y + player.height > object.y &&
-    player.y < object.y + object.height
-  );
-}
+
 
 // Desenha um objeto do jogo, utilizando de um contxto do canvas uma imagem de spritesheet e o próprio objeto
 // São utilizadas as coodenadas do objeto, e do recorte do sprite que contem a imagem dele, além das dimensões do objeto e do recorte do sprite
@@ -41,6 +35,15 @@ const cap = (up_cap, down_cap) => (pos, height) => {
 //mapeia um valor de zero a um para um valor dentro do intervalo especificado(utilizado para trabalhar com numeros aleatorios)
 const map = (up, down) => (value) => value*(up - down) + down
 
+// Verifica se ocorreu uma colisão entre o jogador e um objeto
+function check_collision(player, object) {
+  return (
+    player.x + player.width > object.x &&
+    player.x < object.x + object.width &&
+    player.y + player.height > object.y &&
+    player.y < object.y + object.height
+  );
+}
 //cria um cano
 const pipe = (x, y, inverted) => {
     return {
@@ -82,27 +85,41 @@ const next_scene = (execution) => (state) => {
     return "start"
   }
   else if (state.scene === "play") {
-    // verifica a colisão do player um com o cano
+    // verifica a colisão dos players com o cano
+    //player 1
     const collided_with_pipe_player1 = state.pipes.pairs.some((pipe) =>
       check_collision(state.player, pipe.floor_pipe) || check_collision(state.player, pipe.sky_pipe)
     )
-
-    // mesma coisa, porém player 2
+   // player2
     const collided_with_pipe_player2 = state.pipes.pairs.some((pipe) =>
       check_collision(state.player2, pipe.floor_pipe) || check_collision(state.player2, pipe.sky_pipe)
     )
 
-    // verifica colisão dos players com o chão com o chão
+    // verifica colisão dos players com o chão
     //player 1
-    const collided_with_floor_player = state.player.y + state.player.height >= state.floor.y
+    const collided_with_floor_player1 = state.player.y + state.player.height >= state.floor.y
     //player 2
     const collided_with_floor_player2 = state.player2.y + state.player2.height >= state.floor.y
 
-    if (collided_with_pipe_player1 || collided_with_pipe_player2 || collided_with_floor_player || collided_with_floor_player2) {
-      // player um OU o player dois colidiu com o cano Ou com o chão, joga para tela inicial
-      return "start"
+    if ((collided_with_pipe_player1 || collided_with_floor_player1) && (collided_with_pipe_player2 || collided_with_floor_player2)) {
+      // player um e player dois colidiram com o cano Ou com o chão, joga para tela final de empate
+      return "tie"
+    }
+    if ((collided_with_pipe_player1 || collided_with_floor_player1) && !(collided_with_pipe_player2 || collided_with_floor_player2)) {
+      // somente player um colidiu com o cano ou com o chão, joga para tela final de vitória do player dois
+      return "winner 2"
+    }
+    if ((collided_with_pipe_player2 || collided_with_floor_player2) && !(collided_with_pipe_player1 || collided_with_floor_player1)) {
+      // somente player dois colidiu com o cano ou com o chão, joga para tela final de vitória do player um
+      return "winner 1"
     }
     return "play"
+  }
+  else if(state.scene === "winner 1" || state.scene === "winner 2" || state.scene === "tie") {
+    if (execution.keyboard.w || execution.keyboard.p) {
+      return "start"
+    }
+    return state.scene
   }
   return "play"
 }
@@ -144,7 +161,10 @@ const next_state = specEvent({
     context: keep("context"),
     spritesheet: keep("spritesheet"),
     spritesheet2: keep("spritesheet2"),
+    spritesheet3: keep("spritesheet3"),
     initial_screen: keep("initial_screen"),
+    tie_screen: keep("tie_screen"),
+    winning_screen: keep("winning_screen"),
     speed: keep("speed"),
     pipes: update_pipes,
     floor: move_scenario_object('floor'),
@@ -168,74 +188,106 @@ const draw_game = (state) => {
           draw_game_object(state.context)(state.spritesheet)(x.sky_pipe)
       })
     }
-    else {
+    else if(state.scene === "start") {
         draw_game_object(state.context)(state.spritesheet)(state.initial_screen)
+    }
+    else if(state.scene === "tie") {
+      draw_game_object(state.context)(state.spritesheet3)(state.tie_screen)
+    }
+    else if(state.scene === "winner 1") {
+      draw_game_object(state.context)(state.spritesheet3)(state.winning_screen)
+      draw_game_object(state.context)(state.spritesheet)(merge(state.player)({y: state.winning_screen.y + state.winning_screen.height/2.1, x: state.winning_screen.x + state.winning_screen.width/10.5}))
+    }
+    else if(state.scene === "winner 2") {
+      draw_game_object(state.context)(state.spritesheet3)(state.winning_screen)
+      draw_game_object(state.context)(state.spritesheet2)(merge(state.player2)({y: state.winning_screen.y + state.winning_screen.height/2.1, x: state.winning_screen.x + state.winning_screen.width/10.5}))
     }
 }
 
 //estado inicial do jogo
 let game = {
-    canvas : Object.freeze(document.getElementById('canvas')),
-    context : Object.freeze(canvas.getContext('2d')),
-    spritesheet: Object.freeze(sprite),
-    spritesheet2: Object.freeze(sprite2),
-    speed: 0.25,
-    scene: "start",
-    floor: {
-        spriteX: 0,
-        spriteY: 610,
-        swidth: 224,
-        sheight: 112,
-        width: canvas.width,
-        height: 112,
-        x: 0,
-        y: canvas.height - 112,
-    },
-    player2: {
-      spriteX: 0,
-      spriteY: 0,
-      swidth: 33,
-      sheight: 24,
-      width: 33,
-      height: 24,
-      x: canvas.width / 2 - 16,
-      y: 50,
-      v: 0,
-      key: "p"
-          },
-    player: {
-      spriteX: 0,
-      spriteY: 0,
-      swidth: 33,
-      sheight: 24,
-      width: 33,
-      height: 24,
-      x: canvas.width / 2 - 16.5,
-      y: 50,
-      v: 0,
-      key: "w"
-    },
-    background : {
-        spriteX: 390,
-        spriteY: 0,
-        swidth: 275,
-        sheight: 204,
-        width: canvas.width,
-        height: canvas.height + 50,
-        x: 0,
-        y: -50
-    },
-    initial_screen:  {
-        spriteX: 134,
-        spriteY: 0,
-        swidth: 174,
-        sheight: 152,
-        width: 174,
-        height: 152,
-        x: (canvas.width / 2) - 174 / 2,
-        y: 50
-    },
-    pipes: {pairs: [], clock: 0}
+  canvas : Object.freeze(document.getElementById('canvas')),
+  context : Object.freeze(canvas.getContext('2d')),
+  spritesheet: Object.freeze(sprite),
+  spritesheet2: Object.freeze(sprite2),
+  spritesheet3: Object.freeze(sprite3),
+  speed: 0.25,
+  scene: "start",
+  floor: {
+    spriteX: 0,
+    spriteY: 610,
+    swidth: 224,
+    sheight: 112,
+    width: canvas.width,
+    height: 112,
+    x: 0,
+    y: canvas.height - 112,
+  },
+  player2: {
+    spriteX: 0,
+    spriteY: 0,
+    swidth: 33,
+    sheight: 24,
+    width: 33,
+    height: 24,
+    x: canvas.width / 2 - 16,
+    y: 50,
+    v: 0,
+    key: "p"
+  },
+  player: {
+    spriteX: 0,
+    spriteY: 0,
+    swidth: 33,
+    sheight: 24,
+    width: 33,
+    height: 24,
+    x: canvas.width / 2 - 16.5,
+    y: 50,
+    v: 0,
+    key: "w"
+  },
+  background : {
+    spriteX: 390,
+    spriteY: 0,
+    swidth: 275,
+    sheight: 204,
+    width: canvas.width,
+    height: canvas.height + 50,
+    x: 0,
+    y: -50
+  },
+  initial_screen:  {
+    spriteX: 134,
+    spriteY: 0,
+    swidth: 174,
+    sheight: 152,
+    width: 174,
+    height: 152,
+    x: (canvas.width / 2) - 174 / 2,
+    y: 50
+  },
+  tie_screen:  {
+    spriteX: 134,
+    spriteY: 145,
+    swidth: 224,
+    sheight: 40,
+    width: 224,
+    height: 40,
+    x: (canvas.width / 2) - 224 / 2,
+    y: 50
+  },
+  winning_screen:  {
+    spriteX: 135,
+    spriteY: 145,
+    swidth: 240,
+    sheight: 200,
+    width: 224,
+    height: 152,
+    x: (canvas.width / 2) - 224 / 2,
+    y: 50
+  },
+  pipes: {pairs: [], clock: 0}
 }
 
 // trecho não funcional
@@ -254,7 +306,7 @@ const loop = (t1) => (t2) => {
   window.requestAnimationFrame(loop(t2));
 };
 
-//atualiza a variável global quando a tecla "w" é apertada e solta
+//atualiza a variável global quando as teclas "w" e "p" é apertada e solta
 window.addEventListener("keypress", (e) => {
   if (e.key === "w" && global_event.w === false) {
     global_event.w = true
