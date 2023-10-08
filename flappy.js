@@ -5,26 +5,22 @@ const objOf     = k => v => ({ [k]: v })
 const spec      = o => x => Object.keys(o).map(k => objOf(k)(o[k](x))).reduce((acc, o) => Object.assign(acc, o))
 const specEvent = o => e => x => Object.keys(o).map(k => objOf(k)(o[k](e)(x))).reduce((acc, o) => Object.assign(acc, o))
 
-//objetos mutáveis, fonte das imagens do game
+//objeto mutável, fonte das imagens do game
 const sprite = new Image()
 sprite.src = "./sprites.png"
-const sprite2 = new Image()
-sprite2.src = "./sprites2.png"
-const sprite3 = new Image()
-sprite3.src = "./sprite3.png"
 //
 
 
-// Desenha um objeto do jogo, utilizando de um contxto do canvas uma imagem de spritesheet e o próprio objeto
+// Desenha um objeto do jogo, utilizando de um contexto do canvas uma imagem de spritesheet e o próprio objeto
 // São utilizadas as coodenadas do objeto, e do recorte do sprite que contem a imagem dele, além das dimensões do objeto e do recorte do sprite
 const draw_game_object = (context) => (image) => (obj) => {
     context.drawImage(image, obj.spriteX, obj.spriteY, obj.swidth, obj.sheight, obj.x, obj.y, obj.width, obj.height)
 }
 
 //Limita uma posição a se manter dentro de um intervalo, para que quando passe das bordas se mantenha nas bordas
-const cap = (up_cap, down_cap) => (pos, height) => {
-    if (pos + height > up_cap) {
-        return up_cap - height
+const cap = (up_cap, down_cap) => (pos) => {
+    if (pos > up_cap) {
+        return up_cap
     }
     if (pos < down_cap) {
         return down_cap
@@ -58,6 +54,20 @@ const pipe = (x, y, inverted) => {
     }
 }
 
+//cria uma moeda
+const coin = (x, y) => {
+  return {
+    spriteX: 0,
+    spriteY: 77 ,
+    swidth: 44,
+    sheight: 45,
+    width:  40,
+    height: 40,
+    x: x,
+    y: y
+  }
+}
+
 //cria um par de canos(um normal e um de cabeça para baixo)
 const pipe_pair = (x, y, gap) => {
     return {
@@ -69,11 +79,18 @@ const pipe_pair = (x, y, gap) => {
 // gera um novo objeto de jogador(player) atualizando sua posição com base na cena do jogo, no tempo passado, e na tecla pressionada
 const next_player = (name) => (execution) => (state) => {
   if(state.scene === "play") {
-    const new_y =   cap(state.canvas.height - state.floor.height, 0)(state[name].y +state[name].v*execution.dt, 24)
+    const new_y = cap(state.canvas.height - state.floor.height, 0)(state[name].y +state[name].v*execution.dt)
     const new_v = (execution.keyboard[state[name].key]) ? -0.5 : state[name].v + execution.dt*0.002
-    return merge(state[name])({y: new_y, v: new_v})
+    const other_name = name === "player" ? "player2" : "player"
+    const added_coin = state.money.coins.some((x) => check_collision(state[name], x)) ? 1: 0
+    const new_coins = state[name].coins + added_coin
+    const size_factor = cap(2, 1)((state[other_name].coins - state[name].coins)*0.25 + 1)
+    const new_height = state[name].sheight*size_factor
+    console.log(size_factor)
+    const new_width = state[name].swidth*size_factor
+    return merge(state[name])({y: new_y, v: new_v, coins: new_coins, width: new_width, height: new_height})
   }
-  return merge(state[name])({x: state.canvas.width / 2 - 16.5, y: 50, v: 0})
+  return merge(state[name])({y: 50, v: 0, width: state[name].swidth, height: state[name].sheight, coins: 0})
 }
 
 //Muda a cena do jogo, sai da tela de início se apertar "w", volta pra tela de inicio se morrer
@@ -116,7 +133,7 @@ const next_scene = (execution) => (state) => {
     return "play"
   }
   else if(state.scene === "winner 1" || state.scene === "winner 2" || state.scene === "tie") {
-    if (execution.keyboard.w || execution.keyboard.p) {
+    if (execution.keyboard.space) {
       return "start"
     }
     return state.scene
@@ -136,8 +153,8 @@ const move_scenario_object = (name) => (execution) => (state) => {
 }
 
 //Move um cano
-const move_pipe = (speed) => (dt) => (selected_pipe) => {
-    return merge(selected_pipe)({x: selected_pipe.x - speed*dt})
+const move_object = (speed) => (dt) => (selected_object) => {
+    return merge(selected_object)({x: selected_object.x - speed*dt})
 }
 
 //atualiza todos os canos da tela(mudando suas posições)
@@ -145,28 +162,41 @@ const update_pipes = (execution) => (state) => {
     if(state.scene === "play")
     {
         const new_gap = map(120, 160)(execution.seed)
-        const new_pos = map(canvas.height/5, 4*canvas.height/5)(execution.seed)
+        const new_pos = map(state.canvas.height/5, 4*state.canvas.height/5)(execution.seed)
         const updated_clock = state.pipes.clock + execution.dt
-        const added_pairs = updated_clock > 1500 ? [...state.pipes.pairs, pipe_pair(canvas.width, new_pos, new_gap)] : [...state.pipes.pairs]
-        const moved_pairs = added_pairs.map((x) => merge(x)({floor_pipe: move_pipe(state.speed)(execution.dt)(x.floor_pipe), sky_pipe: move_pipe(state.speed)(execution.dt)(x.sky_pipe)}))
+        const added_pairs = updated_clock > 1500 ? [...state.pipes.pairs, pipe_pair(state.canvas.width, new_pos, new_gap)] : [...state.pipes.pairs]
+        const moved_pairs = added_pairs.map((x) => merge(x)({floor_pipe: move_object(state.speed)(execution.dt)(x.floor_pipe), sky_pipe: move_object(state.speed)(execution.dt)(x.sky_pipe)}))
         //const on_screen_pairs = moved_pairs.filter((x) => x.floor_pipe.x + 52 < 0)
         const new_clock = updated_clock > 1500 ? 0 : updated_clock
         return {pairs: [...moved_pairs], clock: new_clock}
     }
     return {pairs: [], clock: 0}
 }
+//atualiza as moedas
+const update_money = (execution) => (state) => {
+  if(state.scene === "play") {
+    const new_posY = map(0, state.canvas.height - state.floor.height - 50)(1 - execution.seed)
+    const new_posX = map(state.canvas.width + 62,state.canvas.width + 52 + 1500*state.speed - 104)(execution.seed)
+    const updated_clock = state.money.clock + execution.dt
+    const added_coins = updated_clock > 1500 ? [...state.money.coins, coin(new_posX, new_posY)] : [...state.money.coins]
+    const moved_coins = added_coins.map((x) => move_object(state.speed)(execution.dt)(x))
+    const intact_coins = moved_coins.filter((x) => !check_collision(state.player, x) && !check_collision(state.player2, x))
+    const new_clock = updated_clock > 1500 ? 0 : updated_clock
+    return {coins: [...intact_coins], clock: new_clock}
+  }
+  return {coins: [], clock: 0}
+}
 //gera um novo estado do jogo
 const next_state = specEvent({
     canvas: keep("canvas"),
     context: keep("context"),
     spritesheet: keep("spritesheet"),
-    spritesheet2: keep("spritesheet2"),
-    spritesheet3: keep("spritesheet3"),
     initial_screen: keep("initial_screen"),
     tie_screen: keep("tie_screen"),
     winning_screen: keep("winning_screen"),
     speed: keep("speed"),
     pipes: update_pipes,
+    money: update_money,
     floor: move_scenario_object('floor'),
     background: move_scenario_object('background'),
     player: next_player("player"),
@@ -181,26 +211,29 @@ const draw_game = (state) => {
     draw_game_object(state.context)(state.spritesheet)(merge(state.background)({x: state.background.x + state.background.width}))
     draw_game_object(state.context)(state.spritesheet)(merge(state.floor)({x: state.floor.x + state.floor.width}))
     if(state.scene === "play"){
-        draw_game_object(state.context)(state.spritesheet)(state.player)
-        draw_game_object(state.context)(state.spritesheet2)(state.player2)
-        state.pipes.pairs.map((x) => {
-          draw_game_object(state.context)(state.spritesheet)(x.floor_pipe)
-          draw_game_object(state.context)(state.spritesheet)(x.sky_pipe)
+      draw_game_object(state.context)(state.spritesheet)(state.player)
+      draw_game_object(state.context)(state.spritesheet)(state.player2)
+      state.pipes.pairs.map((x) => {
+        draw_game_object(state.context)(state.spritesheet)(x.floor_pipe)
+        draw_game_object(state.context)(state.spritesheet)(x.sky_pipe)
+      })
+      state.money.coins.map((x) => {
+        draw_game_object(state.context)(state.spritesheet)(x)
       })
     }
     else if(state.scene === "start") {
         draw_game_object(state.context)(state.spritesheet)(state.initial_screen)
     }
     else if(state.scene === "tie") {
-      draw_game_object(state.context)(state.spritesheet3)(state.tie_screen)
+      draw_game_object(state.context)(state.spritesheet)(state.tie_screen)
     }
     else if(state.scene === "winner 1") {
-      draw_game_object(state.context)(state.spritesheet3)(state.winning_screen)
-      draw_game_object(state.context)(state.spritesheet)(merge(state.player)({y: state.winning_screen.y + state.winning_screen.height/2.1, x: state.winning_screen.x + state.winning_screen.width/10.5}))
+      draw_game_object(state.context)(state.spritesheet)(state.winning_screen)
+      draw_game_object(state.context)(state.spritesheet)(merge(state.player)({y: state.winning_screen.y + state.winning_screen.height/2.25, x: state.winning_screen.x + state.winning_screen.width/8, width: state.player.swidth, height: state.player.sheight}))
     }
     else if(state.scene === "winner 2") {
-      draw_game_object(state.context)(state.spritesheet3)(state.winning_screen)
-      draw_game_object(state.context)(state.spritesheet2)(merge(state.player2)({y: state.winning_screen.y + state.winning_screen.height/2.1, x: state.winning_screen.x + state.winning_screen.width/10.5}))
+      draw_game_object(state.context)(state.spritesheet)(state.winning_screen)
+      draw_game_object(state.context)(state.spritesheet)(merge(state.player2)({y: state.winning_screen.y + state.winning_screen.height/2.25, x: state.winning_screen.x + state.winning_screen.width/8, width: state.player2.swidth, height: state.player2.sheight}))
     }
 }
 
@@ -209,8 +242,6 @@ let game = {
   canvas : Object.freeze(document.getElementById('canvas')),
   context : Object.freeze(canvas.getContext('2d')),
   spritesheet: Object.freeze(sprite),
-  spritesheet2: Object.freeze(sprite2),
-  spritesheet3: Object.freeze(sprite3),
   speed: 0.25,
   scene: "start",
   floor: {
@@ -224,7 +255,7 @@ let game = {
     y: canvas.height - 112,
   },
   player2: {
-    spriteX: 0,
+    spriteX: 38,
     spriteY: 0,
     swidth: 33,
     sheight: 24,
@@ -233,7 +264,8 @@ let game = {
     x: canvas.width / 2 - 16,
     y: 50,
     v: 0,
-    key: "p"
+    key: "p",
+    coins: 0
   },
   player: {
     spriteX: 0,
@@ -245,7 +277,8 @@ let game = {
     x: canvas.width / 2 - 16.5,
     y: 50,
     v: 0,
-    key: "w"
+    key: "w",
+    coins: 0
   },
   background : {
     spriteX: 390,
@@ -255,7 +288,8 @@ let game = {
     width: canvas.width,
     height: canvas.height + 50,
     x: 0,
-    y: -50
+    y: -50,
+    coins: 0
   },
   initial_screen:  {
     spriteX: 134,
@@ -269,7 +303,7 @@ let game = {
   },
   tie_screen:  {
     spriteX: 134,
-    spriteY: 145,
+    spriteY: 155,
     swidth: 224,
     sheight: 40,
     width: 224,
@@ -279,7 +313,7 @@ let game = {
   },
   winning_screen:  {
     spriteX: 135,
-    spriteY: 145,
+    spriteY: 155,
     swidth: 240,
     sheight: 200,
     width: 224,
@@ -287,12 +321,13 @@ let game = {
     x: (canvas.width / 2) - 224 / 2,
     y: 50
   },
-  pipes: {pairs: [], clock: 0}
+  pipes: {pairs: [], clock: 0},
+  money: {coins: [], clock: 0}
 }
 
 // trecho não funcional
 //variável que armazena quando a tecla "w" é apertada e a variação de tempo entre um frame e outro
-let global_event = {w: false, p: false }
+let global_event = {w: false, p: false, space: false}
 
 //atualiza os frames e o estado do jogo
 //atualiza os frames e o estado do jogo
@@ -314,6 +349,9 @@ window.addEventListener("keypress", (e) => {
   if (e.key === "p" && global_event.p === false) {
     global_event.p = true
   }
+  if (e.key === " " && global_event.space === false) {
+    global_event.space = true
+  }
 })
 window.addEventListener("keyup", (e) => {
   if (e.key === "w") {
@@ -321,6 +359,9 @@ window.addEventListener("keyup", (e) => {
   }
   if (e.key === "p") {
     global_event.p = false
+  }
+  if (e.key === " ") {
+    global_event.space = false
   }
 })
 //roda o jogo
