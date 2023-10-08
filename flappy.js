@@ -80,7 +80,7 @@ const pipe_pair = (x, y, gap) => {
 const next_player = (name) => (execution) => (state) => {
   if(state.scene === "play") {
     const new_y = cap(state.canvas.height - state.floor.height, 0)(state[name].y +state[name].v*execution.dt)
-    const new_v = (execution.keyboard[state[name].key]) ? -0.5 : state[name].v + execution.dt*0.002
+    const new_v = (execution.keyboard[state[name].key] && !execution.keyboard.last_event[state[name].key]) ? -0.5 : state[name].v + execution.dt * 0.002
     const other_name = name === "player" ? "player2" : "player"
     const added_coin = state.money.coins.some((x) => check_collision(state[name], x)) ? 1: 0
     const new_coins = state[name].coins + added_coin
@@ -356,12 +356,15 @@ let game = {
 
 
 //variável que armazena quando a tecla "w" é apertada e a variação de tempo entre um frame e outro
-let global_event = {w: false, p: false, space: false}
+let global_event = {w: false, p: false, space: false, last_event: {w: false, p: false}}
 
 //atualiza os frames e o estado do jogo
 const loop = (t1) => (t2) => {
   // atualiza o jogo
   game = next_state({dt: t2 - t1, seed: Math.random(), keyboard: global_event})(game);
+  //atualiza a ultima tecla apertada
+  global_event.last_event[game.player.key] = global_event[game.player.key];
+  global_event.last_event[game.player2.key] = global_event[game.player2.key];
   // renderiza o jogo na tela
   draw_game(game);
   //chama a função de novo
@@ -370,22 +373,28 @@ const loop = (t1) => (t2) => {
 
 //atualiza a variável global quando as teclas "w", "p" e " " é apertada e solta
 window.addEventListener("keypress", (e) => {
-  if (e.key === "w" && global_event.w === false) {
-    global_event.w = true
+  if ((e.key === "w" || e.key === "p") && !global_event.last_event[e.key]) {
+    global_event[e.key] = true;
   }
-  if (e.key === "p" && global_event.p === false) {
-    global_event.p = true
-  }
-  if (e.key === " " && global_event.space === false) {
+  if (e.key === " ") {
     global_event.space = true
+    e.preventDefault()
+  }
+  if (e.altKey) {
+    e.preventDefault();
+  }
+  if (e.key == "tab") {
+    e.preventDefault();
   }
 })
 window.addEventListener("keyup", (e) => {
   if (e.key === "w") {
-    global_event.w = false
+    global_event[e.key] = false;
+    global_event.last_event[e.key] = false
   }
   if (e.key === "p") {
-    global_event.p = false
+    global_event[e.key] = false;
+    global_event.last_event[e.key] = false
   }
   if (e.key === " ") {
     global_event.space = false
