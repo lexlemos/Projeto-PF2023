@@ -201,6 +201,8 @@ const next_state = specEvent({
     background: move_scenario_object('background'),
     player: next_player("player"),
     player2: next_player("player2"),
+      press_w: keep("press_w"),
+    press_space: keep("press_space"),
     scene: next_scene
 })
 
@@ -223,17 +225,21 @@ const draw_game = (state) => {
     }
     else if(state.scene === "start") {
         draw_game_object(state.context)(state.spritesheet)(state.initial_screen)
+      draw_game_object(state.context)(state.spritesheet)(state.press_w)
     }
     else if(state.scene === "tie") {
       draw_game_object(state.context)(state.spritesheet)(state.tie_screen)
+      draw_game_object(state.context)(state.spritesheet)(state.press_space)
     }
     else if(state.scene === "winner 1") {
       draw_game_object(state.context)(state.spritesheet)(state.winning_screen)
       draw_game_object(state.context)(state.spritesheet)(merge(state.player)({y: state.winning_screen.y + state.winning_screen.height/2.25, x: state.winning_screen.x + state.winning_screen.width/8, width: state.player.swidth, height: state.player.sheight}))
+      draw_game_object(state.context)(state.spritesheet)(state.press_space)
     }
     else if(state.scene === "winner 2") {
       draw_game_object(state.context)(state.spritesheet)(state.winning_screen)
       draw_game_object(state.context)(state.spritesheet)(merge(state.player2)({y: state.winning_screen.y + state.winning_screen.height/2.25, x: state.winning_screen.x + state.winning_screen.width/8, width: state.player2.swidth, height: state.player2.sheight}))
+      draw_game_object(state.context)(state.spritesheet)(state.press_space)
     }
 }
 
@@ -321,8 +327,29 @@ let game = {
     x: (canvas.width / 2) - 224 / 2,
     y: 50
   },
+  press_w: {
+    spriteX: 248,
+    spriteY: 590,
+    swidth: 300,
+    sheight: 300,
+    width: 390,
+    height: 250,
+    x: (canvas.width / 2) - 350 / 2,
+    y: 380
+  },
+  press_space: {
+    spriteX: 500,
+    spriteY: 600,
+    swidth: 260,
+    sheight: 300,
+    width: 250,
+    height: 200,
+    x: (canvas.width / 2) - 210 / 2,
+    y: 400
+  },
   pipes: {pairs: [], clock: 0},
   money: {coins: [], clock: 0}
+    
 }
 
 // trecho não funcional
