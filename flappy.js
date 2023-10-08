@@ -34,11 +34,11 @@ const map = (up, down) => (value) => value*(up - down) + down
 // Verifica se ocorreu uma colisão entre o jogador e um objeto
 function check_collision(player, object) {
   return (
-    player.x + player.width > object.x &&
-    player.x < object.x + object.width &&
-    player.y + player.height > object.y &&
-    player.y < object.y + object.height
-  );
+    player.x + player.width >= object.x &&
+    player.x <= object.x + object.width &&
+    player.y + player.height >= object.y &&
+    player.y <= object.y + object.height
+  )
 }
 //cria um cano
 const pipe = (x, y, inverted) => {
@@ -86,7 +86,7 @@ const next_player = (name) => (execution) => (state) => {
     const new_coins = state[name].coins + added_coin
     const size_factor = cap(2, 1)((state[other_name].coins - state[name].coins)*0.25 + 1)
     const new_height = state[name].sheight*size_factor
-    console.log(size_factor)
+    //console.log(size_factor)
     const new_width = state[name].swidth*size_factor
     return merge(state[name])({y: new_y, v: new_v, coins: new_coins, width: new_width, height: new_height})
   }
@@ -162,7 +162,7 @@ const update_pipes = (execution) => (state) => {
     if(state.scene === "play")
     {
         const new_gap = map(120, 160)(execution.seed)
-        const new_pos = map(state.canvas.height/5, 4*state.canvas.height/5)(execution.seed)
+        const new_pos = map(52 + new_gap, state.floor.y - 52)(execution.seed)
         const updated_clock = state.pipes.clock + execution.dt
         const added_pairs = updated_clock > 1500 ? [...state.pipes.pairs, pipe_pair(state.canvas.width, new_pos, new_gap)] : [...state.pipes.pairs]
         const moved_pairs = added_pairs.map((x) => merge(x)({floor_pipe: move_object(state.speed)(execution.dt)(x.floor_pipe), sky_pipe: move_object(state.speed)(execution.dt)(x.sky_pipe)}))
@@ -179,10 +179,10 @@ const update_money = (execution) => (state) => {
     const new_posX = map(state.canvas.width + 62,state.canvas.width + 52 + 1500*state.speed - 104)(execution.seed)
     const updated_clock = state.money.clock + execution.dt
     const added_coins = updated_clock > 1500 ? [...state.money.coins, coin(new_posX, new_posY)] : [...state.money.coins]
-    const moved_coins = added_coins.map((x) => move_object(state.speed)(execution.dt)(x))
-    const intact_coins = moved_coins.filter((x) => !check_collision(state.player, x) && !check_collision(state.player2, x))
+    const intact_coins = added_coins.filter((x) => !check_collision(state.player, x) && !check_collision(state.player2, x))
+    const moved_coins = intact_coins.map((x) => move_object(state.speed)(execution.dt)(x))
     const new_clock = updated_clock > 1500 ? 0 : updated_clock
-    return {coins: [...intact_coins], clock: new_clock}
+    return {coins: [...moved_coins], clock: new_clock}
   }
   return {coins: [], clock: 0}
 }
@@ -196,12 +196,12 @@ const next_state = specEvent({
     winning_screen: keep("winning_screen"),
     speed: keep("speed"),
     pipes: update_pipes,
-    money: update_money,
     floor: move_scenario_object('floor'),
     background: move_scenario_object('background'),
     player: next_player("player"),
     player2: next_player("player2"),
-      press_w: keep("press_w"),
+    money: update_money,
+    press_w: keep("press_w"),
     press_space: keep("press_space"),
     scene: next_scene
 })
@@ -225,7 +225,7 @@ const draw_game = (state) => {
     }
     else if(state.scene === "start") {
         draw_game_object(state.context)(state.spritesheet)(state.initial_screen)
-      draw_game_object(state.context)(state.spritesheet)(state.press_w)
+        draw_game_object(state.context)(state.spritesheet)(state.press_w)
     }
     else if(state.scene === "tie") {
       draw_game_object(state.context)(state.spritesheet)(state.tie_screen)
@@ -243,7 +243,9 @@ const draw_game = (state) => {
     }
 }
 
-//estado inicial do jogo
+// trecho não funcional
+
+//estado do jogo
 let game = {
   canvas : Object.freeze(document.getElementById('canvas')),
   context : Object.freeze(canvas.getContext('2d')),
@@ -256,9 +258,9 @@ let game = {
     swidth: 224,
     sheight: 112,
     width: canvas.width,
-    height: 112,
+    height: (112/480)*canvas.width,
     x: 0,
-    y: canvas.height - 112,
+    y: canvas.height - (112/480)*canvas.width,
   },
   player2: {
     spriteX: 38,
@@ -267,7 +269,7 @@ let game = {
     sheight: 24,
     width: 33,
     height: 24,
-    x: canvas.width / 2 - 16,
+    x: canvas.width / 2 - 16.5,
     y: 50,
     v: 0,
     key: "p",
@@ -352,23 +354,21 @@ let game = {
     
 }
 
-// trecho não funcional
+
 //variável que armazena quando a tecla "w" é apertada e a variação de tempo entre um frame e outro
 let global_event = {w: false, p: false, space: false}
 
 //atualiza os frames e o estado do jogo
-//atualiza os frames e o estado do jogo
 const loop = (t1) => (t2) => {
   // atualiza o jogo
   game = next_state({dt: t2 - t1, seed: Math.random(), keyboard: global_event})(game);
-
   // renderiza o jogo na tela
   draw_game(game);
   //chama a função de novo
   window.requestAnimationFrame(loop(t2));
 };
 
-//atualiza a variável global quando as teclas "w" e "p" é apertada e solta
+//atualiza a variável global quando as teclas "w", "p" e " " é apertada e solta
 window.addEventListener("keypress", (e) => {
   if (e.key === "w" && global_event.w === false) {
     global_event.w = true
