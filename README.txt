@@ -1,4 +1,4 @@
-Olá, esse é o FLAPPY BIRD BATTLE, um jogo baseado no famoso game "Flappy Bird" desenvolvido pela .GEARS fundada por Dong Nguyen!
+Olá, esse é o FLAPPY BIRD BATTLE OF COINS, um jogo baseado no famoso game "Flappy Bird" desenvolvido pela .GEARS fundada por Dong Nguyen!
 
 O código foi criado a partir de um estudo feito em cima dos vídeos de Mário Souto.
 
