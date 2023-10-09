@@ -166,7 +166,7 @@ const move_scenario_object = (name) => (execution) => (state) => {
     return merge(state[name])({x: state[name].x - state.speed*execution.dt})
 }
 
-//Move um cano
+//Move um objeto do jogo, utilizado para mover canos e moedas
 const move_object = (speed) => (dt) => (selected_object) => {
     return merge(selected_object)({x: selected_object.x - speed*dt})
 }
@@ -395,7 +395,7 @@ let game = {
 }
 
 
-//variável que armazena quando a tecla "w" é apertada e a variação de tempo entre um frame e outro
+//variável que armazena se as teclas do jogo foram apertadas
 let global_event = {w: false, p: false, space: false, last_event: {w: false, p: false}}
 
 //atualiza os frames e o estado do jogo
