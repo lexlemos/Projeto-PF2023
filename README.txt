@@ -7,3 +7,5 @@ Funções desenvolvidas por chrokh https://github.com/chrokh/fp-games/blob/maste
 Moving Boulder by L'homme Manete is license under a Attribution-NonCommercial-ShareAlike 3.0 International License.
 
 Link do game na web: https://flappybird-battleofcoins.netlify.app/flappy.html
+
+Link do vídeo sobre o jogo: https://www.youtube.com/watch?v=rWTr5WFuHIA
