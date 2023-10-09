@@ -423,6 +423,7 @@ const loop = (t1) => (t2) => {
 };
 
 //atualiza a variável global quando as teclas "w", "p" e " " é apertada e solta
+// impede a tecla alt, tab e spacebar de tirar o foco do jogo
 window.addEventListener("keypress", (e) => {
   if ((e.key === "w" || e.key === "p") && !global_event.last_event[e.key]) {
     global_event[e.key] = true;
