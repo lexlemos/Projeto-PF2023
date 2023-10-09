@@ -3,9 +3,12 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
+    background-color: greenyellow;
 }
 canvas {
     border: 1px solid #000;
     display: block;
     margin: 0 auto;
+    width: 60%;
+    min-width: 647px;
 }
