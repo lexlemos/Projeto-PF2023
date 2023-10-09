@@ -8,7 +8,11 @@ const specEvent = o => e => x => Object.keys(o).map(k => objOf(k)(o[k](e)(x))).r
 //objeto mutável, fonte das imagens do game
 const sprite = new Image()
 sprite.src = "./sprites.png"
-//
+
+// Música de fundo: Moving Boulder by L'home Manete
+// Moving BOulder by L'homme Manete is license under a Attribution-NonCommercial-ShareAlike 3.0 International License.
+const audio = document.getElementById("audio")
+audio.volume = 0.2
 
 
 // Desenha um objeto do jogo, utilizando de um contexto do canvas uma imagem de spritesheet e o próprio objeto
@@ -370,6 +374,7 @@ let global_event = {w: false, p: false, space: false, last_event: {w: false, p: 
 
 //atualiza os frames e o estado do jogo
 const loop = (t1) => (t2) => {
+  audio.play()
   // atualiza o jogo
   game = next_state({dt: t2 - t1, seed: Math.random(), keyboard: global_event})(game);
   //atualiza a ultima tecla apertada
