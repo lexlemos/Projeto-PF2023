@@ -1,8 +1,12 @@
 // funções desenvolvidas por chrokh
 // https://github.com/chrokh/fp-games/blob/master/001-snake/base.js
+//cria um novo objeto com as propriedades dos dois objetos de parâmetro, as do segumdo sobrescrevem as do primeiro
 const merge     = o1 => o2 => Object.assign({}, o1, o2)
+//cria um objeto a partir de uma chave e um valor passados com parâmetro
 const objOf     = k => v => ({ [k]: v })
+//cria um objeto a partir de um objeto de funções com as mesmas chaves  um parâmero para a chamada dessas funções, retorna um objeto com os valores equivalentes aos resultados da chamda das funções para auele parâmetro
 const spec      = o => x => Object.keys(o).map(k => objOf(k)(o[k](x))).reduce((acc, o) => Object.assign(acc, o))
+//faz a mesma coisa que spec só que para dois parâmetros de função
 const specEvent = o => e => x => Object.keys(o).map(k => objOf(k)(o[k](e)(x))).reduce((acc, o) => Object.assign(acc, o))
 
 //objeto mutável, fonte das imagens do game
@@ -54,7 +58,7 @@ function check_collision(player, object) {
     player.y <= object.y + object.height
   )
 }
-//cria um cano
+//cria um cano dadas as coordenadas, parametro inverted define se ele vai estar de cabeça para baixo ou não
 const pipe = (x, y, inverted) => {
     return {
         spriteX: inverted ? 52 : 0,
@@ -68,7 +72,7 @@ const pipe = (x, y, inverted) => {
     }
 }
 
-//cria uma moeda
+//cria uma moeda dadas as coordenadas
 const coin = (x, y) => {
   return {
     spriteX: 0,
@@ -82,7 +86,7 @@ const coin = (x, y) => {
   }
 }
 
-//cria um par de canos(um normal e um de cabeça para baixo)
+//cria um par de canos(um normal e um de cabeça para baixo) com uma lacuna entre eles
 const pipe_pair = (x, y, gap) => {
     return {
         floor_pipe: pipe(x, y, false),
@@ -107,7 +111,7 @@ const next_player = (name) => (execution) => (state) => {
   return merge(state[name])({y: 50, v: 0, width: state[name].swidth, height: state[name].sheight, coins: 0})
 }
 
-//Muda a cena do jogo, sai da tela de início se apertar "w", volta pra tela de inicio se morrer
+//Muda a cena do jogo, sai da tela de início se apertar "w" ou "p", vai para as telas finais de vencedor se morrer e de lá volta para a inicial se apertar espaço
 const next_scene = (execution) => (state) => {
   if (state.scene === "start") {
     if (execution.keyboard.w || execution.keyboard.p) {
@@ -171,7 +175,7 @@ const move_object = (speed) => (dt) => (selected_object) => {
     return merge(selected_object)({x: selected_object.x - speed*dt})
 }
 
-//atualiza todos os canos da tela(mudando suas posições)
+//atualiza todos os canos da tela, mudando suas posições e adicionando novos canos conforme o tempo passa
 const update_pipes = (execution) => (state) => {
     if(state.scene === "play")
     {
@@ -186,7 +190,7 @@ const update_pipes = (execution) => (state) => {
     }
     return {pairs: [], clock: 0}
 }
-//atualiza as moedas
+//atualiza as moedas, mudando suas posições, adicionando novas com o tempo e excluindo as que foram pegas pelos jogadores
 const update_money = (execution) => (state) => {
   if(state.scene === "play") {
     const new_posY = map(0, state.canvas.height - state.floor.height - 50)(1 - execution.seed)
@@ -225,7 +229,7 @@ const next_sounds = (execution) => (state) => {
   }
   return {hurt: false, jump: false, coin: false}
 }
-//gera um novo estado do jogo
+//gera um novo estado do jogo a partir do retorno da função specEvent em um objeto com as funções que atualizam as propriedades do jogo, receberá como parâmetro os dados de evento e execução e o estado atual do jogo
 const next_state = specEvent({
     canvas: keep("canvas"),
     context: keep("context"),
@@ -285,7 +289,7 @@ const draw_game = (state) => {
 
 // trecho não funcional
 
-//estado do jogo
+//variável que armazena o estado do jogo
 let game = {
   canvas : Object.freeze(document.getElementById('canvas')),
   context : Object.freeze(canvas.getContext('2d')),
