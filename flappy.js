@@ -76,17 +76,22 @@ const pipe_pair = (x, y, gap) => {
     }
 }
 
-// gera um novo objeto de jogador(player) atualizando sua posição com base na cena do jogo, no tempo passado, e na tecla pressionada
+// gera um novo objeto de jogador - podendo ser o player ou player2- atualizando sua posição com base na cena do jogo, no tempo passado, e na tecla pressionada
 const next_player = (name) => (execution) => (state) => {
   if(state.scene === "play") {
+    
+//atualiza a posição e velocidade do player
     const new_y = cap(state.canvas.height - state.floor.height, 0)(state[name].y +state[name].v*execution.dt)
     const new_v = (execution.keyboard[state[name].key] && !execution.keyboard.last_event[state[name].key]) ? -0.5 : state[name].v + execution.dt * 0.002
     const other_name = name === "player" ? "player2" : "player"
+
+    //verifica se o jogador colidiu com alguma moeda
     const added_coin = state.money.coins.some((x) => check_collision(state[name], x)) ? 1: 0
+    //adiciona contagem de moedas para o jogador, atualizando seu valor a cada mudança
     const new_coins = state[name].coins + added_coin
+    //multiplicador de tamanho dos jogadores- penalidade causada pelas moedas
     const size_factor = cap(2, 1)((state[other_name].coins - state[name].coins)*0.25 + 1)
     const new_height = state[name].sheight*size_factor
-    //console.log(size_factor)
     const new_width = state[name].swidth*size_factor
     return merge(state[name])({y: new_y, v: new_v, coins: new_coins, width: new_width, height: new_height})
   }
@@ -166,13 +171,12 @@ const update_pipes = (execution) => (state) => {
         const updated_clock = state.pipes.clock + execution.dt
         const added_pairs = updated_clock > 1500 ? [...state.pipes.pairs, pipe_pair(state.canvas.width, new_pos, new_gap)] : [...state.pipes.pairs]
         const moved_pairs = added_pairs.map((x) => merge(x)({floor_pipe: move_object(state.speed)(execution.dt)(x.floor_pipe), sky_pipe: move_object(state.speed)(execution.dt)(x.sky_pipe)}))
-        //const on_screen_pairs = moved_pairs.filter((x) => x.floor_pipe.x + 52 < 0)
         const new_clock = updated_clock > 1500 ? 0 : updated_clock
         return {pairs: [...moved_pairs], clock: new_clock}
     }
     return {pairs: [], clock: 0}
 }
-//atualiza as moedas
+//atualiza as moedas, fazendo-as mudar de posição aleatoriamente
 const update_money = (execution) => (state) => {
   if(state.scene === "play") {
     const new_posY = map(0, state.canvas.height - state.floor.height - 50)(1 - execution.seed)
@@ -212,6 +216,7 @@ const draw_game = (state) => {
     draw_game_object(state.context)(state.spritesheet)(state.floor)
     draw_game_object(state.context)(state.spritesheet)(merge(state.background)({x: state.background.x + state.background.width}))
     draw_game_object(state.context)(state.spritesheet)(merge(state.floor)({x: state.floor.x + state.floor.width}))
+  //desenha todos elementos da tela inicial do jogo
     if(state.scene === "play"){
       draw_game_object(state.context)(state.spritesheet)(state.player)
       draw_game_object(state.context)(state.spritesheet)(state.player2)
@@ -223,19 +228,23 @@ const draw_game = (state) => {
         draw_game_object(state.context)(state.spritesheet)(x)
       })
     }
+      //desenha os elementos do jogo enquanto ele está sendo rodado
     else if(state.scene === "start") {
         draw_game_object(state.context)(state.spritesheet)(state.initial_screen)
         draw_game_object(state.context)(state.spritesheet)(state.press_w)
     }
+      //desenha a tela de empate
     else if(state.scene === "tie") {
       draw_game_object(state.context)(state.spritesheet)(state.tie_screen)
       draw_game_object(state.context)(state.spritesheet)(state.press_space)
     }
+      //desenha a tela de vencedor, com a foto do player1
     else if(state.scene === "winner 1") {
       draw_game_object(state.context)(state.spritesheet)(state.winning_screen)
       draw_game_object(state.context)(state.spritesheet)(merge(state.player)({y: state.winning_screen.y + state.winning_screen.height/2.25, x: state.winning_screen.x + state.winning_screen.width/8, width: state.player.swidth, height: state.player.sheight}))
       draw_game_object(state.context)(state.spritesheet)(state.press_space)
     }
+      //desenha a tela de vencedor, com a foto do player2
     else if(state.scene === "winner 2") {
       draw_game_object(state.context)(state.spritesheet)(state.winning_screen)
       draw_game_object(state.context)(state.spritesheet)(merge(state.player2)({y: state.winning_screen.y + state.winning_screen.height/2.25, x: state.winning_screen.x + state.winning_screen.width/8, width: state.player2.swidth, height: state.player2.sheight}))
@@ -246,6 +255,7 @@ const draw_game = (state) => {
 // trecho não funcional
 
 //estado do jogo
+//declaração dos sprites de cada parte do código, desde o plano de fundo até as ferramentas telas de vencedor, moedas e canos
 let game = {
   canvas : Object.freeze(document.getElementById('canvas')),
   context : Object.freeze(canvas.getContext('2d')),
@@ -355,7 +365,7 @@ let game = {
 }
 
 
-//variável que armazena quando a tecla "w" é apertada e a variação de tempo entre um frame e outro
+//variável que armazena quando as teclas "w" "p" e "space" são apertadas e a variação de tempo entre um frame e outro
 let global_event = {w: false, p: false, space: false, last_event: {w: false, p: false}}
 
 //atualiza os frames e o estado do jogo
